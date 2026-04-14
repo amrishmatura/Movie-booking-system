@@ -1,0 +1,146 @@
+{% extends 'base.html' %}
+{% block title %}Select Seats | {{ show.movie.title }}{% endblock %}
+
+{% block content %}
+<div class="flex flex-col lg:flex-row gap-8">
+    
+    <!-- Seat Map Section -->
+    <div class="lg:w-2/3 glass-panel rounded-3xl p-8 shadow-2xl border border-gray-800 overflow-x-auto">
+        <div class="text-center mb-10">
+            <h2 class="text-3xl font-extrabold text-white">Select Your Seats</h2>
+            <p class="text-gray-400 mt-2">{{ show.screen.screen_name }} &bull; {{ show.show_time|time:"g:i A" }}</p>
+        </div>
+        
+        <!-- Screen curve element -->
+        <div class="w-3/4 mx-auto h-12 border-t-4 border-premium-accent rounded-[50%] opacity-70 shadow-[0_-10px_20px_rgba(245,158,11,0.2)] mb-12">
+            <div class="text-center text-xs text-gray-500 font-bold uppercase tracking-widest mt-2">Screen</div>
+        </div>
+
+        <form id="booking-form" action="{% url 'checkout' %}" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="show_id" value="{{ show.id }}">
+            
+            <div class="flex flex-col items-center gap-3 w-fit mx-auto">
+                {% for row_label, seat_list in row_dict.items %}
+                    <div class="flex items-center gap-4">
+                        <div class="w-6 text-center text-gray-500 font-bold">{{ row_label }}</div>
+                        <div class="flex gap-2">
+                            {% for seat in seat_list %}
+                                {% if seat.is_booked %}
+                                    <div class="w-8 h-8 rounded-t-lg bg-gray-700 border-b-4 border-gray-900 cursor-not-allowed opacity-50 flex items-center justify-center text-xs font-semibold text-gray-500">
+                                        {{ seat.seat_number }}
+                                    </div>
+                                {% else %}
+                                    <label class="cursor-pointer relative">
+                                        <input type="checkbox" name="seats[]" value="{{ seat.id }}" 
+                                            class="peer sr-only seat-checkbox" 
+                                            data-label="{{ seat.row_label }}{{ seat.seat_number }}"
+                                            data-price="{{ show.ticket_price }}">
+                                        <div class="w-8 h-8 rounded-t-lg bg-gray-600 border-b-4 border-gray-800 hover:bg-gray-500 peer-checked:bg-premium-accent peer-checked:border-yellow-600 peer-checked:text-gray-900 transition-colors flex items-center justify-center text-xs font-semibold text-gray-300 peer-checked:font-bold">
+                                            {{ seat.seat_number }}
+                                        </div>
+                                    </label>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        <div class="w-6 text-center text-gray-500 font-bold">{{ row_label }}</div>
+                    </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Legend -->
+            <div class="flex justify-center gap-8 mt-12 pt-8 border-t border-gray-800">
+                <div class="flex items-center gap-2 text-sm text-gray-400">
+                    <div class="w-6 h-6 rounded-t-sm bg-gray-600 border-b-2 border-gray-800"></div> Available
+                </div>
+                <div class="flex items-center gap-2 text-sm text-gray-400">
+                    <div class="w-6 h-6 rounded-t-sm bg-premium-accent border-b-2 border-yellow-600"></div> Selected
+                </div>
+                <div class="flex items-center gap-2 text-sm text-gray-400">
+                    <div class="w-6 h-6 rounded-t-sm bg-gray-700 border-b-2 border-gray-900 opacity-50"></div> Booked
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Booking Summary Sidebar -->
+    <div class="lg:w-1/3 space-y-6">
+        <div class="glass-panel rounded-3xl p-6 shadow-2xl border border-gray-800 relative overflow-hidden">
+            {% if show.movie.poster_url %}
+                <img src="{{ show.movie.poster_url }}" class="absolute inset-0 w-full h-full object-cover opacity-10 filter blur-xl z-0">
+            {% endif %}
+            
+            <div class="relative z-10">
+                <h3 class="text-xl font-bold text-white mb-6 border-b border-gray-700 pb-4">Booking Summary</h3>
+                
+                <div class="space-y-4 mb-6">
+                    <div>
+                        <div class="text-sm text-gray-400">Movie</div>
+                        <div class="font-bold text-white text-lg">{{ show.movie.title }}</div>
+                    </div>
+                    <div>
+                        <div class="text-sm text-gray-400">Date & Time</div>
+                        <div class="font-semibold text-white">{{ show.show_date|date:"M d, Y" }} at {{ show.show_time|time:"g:i A" }}</div>
+                    </div>
+                    <div>
+                        <div class="text-sm text-gray-400">Selected Seats (<span id="seat-count">0</span>)</div>
+                        <div id="selected-seats-list" class="font-semibold text-premium-accent min-h-[1.5rem] mt-1 text-sm tracking-wide">
+                            No seats selected
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="border-t border-gray-700 pt-4 mb-6">
+                    <div class="flex justify-between items-center text-xl font-bold">
+                        <span class="text-white">Total Amount</span>
+                        <span class="text-premium-accent">$<span id="total-amount">0.00</span></span>
+                    </div>
+                </div>
+                
+                <button type="button" onclick="document.getElementById('booking-form').submit();" id="checkout-btn" disabled 
+                    class="w-full py-4 bg-gray-700 text-gray-400 font-bold rounded-xl transition-all duration-300 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                    Proceed to Checkout
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const checkboxes = document.querySelectorAll('.seat-checkbox');
+        const seatCountDisplay = document.getElementById('seat-count');
+        const seatListDisplay = document.getElementById('selected-seats-list');
+        const amountDisplay = document.getElementById('total-amount');
+        const checkoutBtn = document.getElementById('checkout-btn');
+        const ticketPrice = parseFloat("{{ show.ticket_price }}");
+
+        function updateSummary() {
+            const selected = Array.from(checkboxes).filter(cb => cb.checked);
+            const count = selected.length;
+            
+            seatCountDisplay.textContent = count;
+            amountDisplay.textContent = (count * ticketPrice).toFixed(2);
+            
+            if (count > 0) {
+                const labels = selected.map(cb => cb.getAttribute('data-label'));
+                seatListDisplay.textContent = labels.join(', ');
+                
+                checkoutBtn.disabled = false;
+                checkoutBtn.classList.remove('bg-gray-700', 'text-gray-400');
+                checkoutBtn.classList.add('bg-premium-accent', 'text-gray-900', 'hover:bg-premium-accenthover');
+            } else {
+                seatListDisplay.textContent = 'No seats selected';
+                
+                checkoutBtn.disabled = true;
+                checkoutBtn.classList.add('bg-gray-700', 'text-gray-400');
+                checkoutBtn.classList.remove('bg-premium-accent', 'text-gray-900', 'hover:bg-premium-accenthover');
+            }
+        }
+
+        checkboxes.forEach(cb => {
+            cb.addEventListener('change', updateSummary);
+        });
+    });
+</script>
+{% endblock %}

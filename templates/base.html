@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}CinemaBook Premium{% endblock %}</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        premium: {
+                            default: '#0f172a',
+                            light: '#1e293b',
+                            accent: '#f59e0b',
+                            accenthover: '#d97706',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    
+    <!-- Alpine.js for interactive UI components (like dropdowns) -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #020617; color: white; }
+        .glass-panel { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.1); }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Navigation -->
+    <nav class="glass-panel sticky top-0 z-50 shadow-xl">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-20">
+                <div class="flex items-center">
+                    <a href="{% url 'home' %}" class="flex items-center gap-2 text-2xl font-extrabold text-white tracking-tight hover:text-premium-accent transition duration-300">
+                        <span class="text-premium-accent text-3xl">🍿</span> CinemaBook
+                    </a>
+                </div>
+                
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-6">
+                        <a href="{% url 'home' %}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-premium-light transition">Movies</a>
+                        
+                        {% if user.is_authenticated %}
+                            {% if user.is_staff %}
+                                <a href="/admin/" class="px-3 py-2 rounded-md text-sm font-medium text-pink-500 hover:text-white hover:bg-pink-600/20 transition">Admin Panel</a>
+                            {% endif %}
+                            <a href="{% url 'my_bookings' %}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-premium-light transition">My Bookings</a>
+                            
+                            <!-- Profile Dropdown (Alpine.js) -->
+                            <div x-data="{ open: false }" class="relative ml-3">
+                                <div>
+                                    <button @click="open = !open" type="button" class="flex items-center gap-2 max-w-xs bg-premium-light rounded-full flex-focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-premium-default focus:ring-premium-accent px-4 py-2 hover:bg-gray-700 transition" id="user-menu-button">
+                                        <span class="text-sm font-medium text-white">{{ user.username }}</span>
+                                        <svg class="h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+                                    </button>
+                                </div>
+                                <div x-show="open" @click.away="open = false" x-transition class="origin-top-right absolute right-0 mt-2 w-48 rounded-lg shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-50">
+                                    <form action="{% url 'logout' %}" method="post" class="block">
+                                        {% csrf_token %}
+                                        <button type="submit" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 font-semibold">Logout</button>
+                                    </form>
+                                </div>
+                            </div>
+                        {% else %}
+                            <a href="{% url 'login' %}" class="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-premium-light hover:bg-gray-600 transition shadow-md">Login</a>
+                            <a href="{% url 'register' %}" class="px-4 py-2 rounded-lg text-sm font-semibold text-gray-900 bg-premium-accent hover:bg-premium-accenthover transition shadow-lg shadow-premium-accent/30">Sign Up</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Messages / Toasts -->
+    {% if messages %}
+        <div class="fixed top-24 right-4 z-50 flex flex-col gap-2">
+            {% for message in messages %}
+                <div class="px-6 py-3 rounded-lg shadow-xl text-white font-medium animate-bounce 
+                    {% if message.tags == 'error' %} bg-red-500 {% elif message.tags == 'success' %} bg-green-500 {% else %} bg-blue-500 {% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Main Content -->
+    <main class="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="glass-panel mt-auto py-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-gray-400 text-sm">
+            <p>&copy; {% now "Y" %} CinemaBook Premium. Developed with Django & Tailwind CSS.</p>
+        </div>
+    </footer>
+
+</body>
+</html>

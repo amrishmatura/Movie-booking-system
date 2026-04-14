@@ -1,0 +1,19 @@
+# Environments
+venv/
+env/
+.env
+
+# Database
+db.sqlite3
+
+# Python Cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Documentation Output (Optional, but good practice if you don't want to push the word doc)
+# P9_Detailed_Project_Report.docx
